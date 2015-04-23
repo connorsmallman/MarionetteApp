@@ -1,83 +1,12 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
-var BreadCrumbModule = function (app) {
-	var module = {};
-	var collection = {};
-
-	var BreadCrumbCollection = require("./models");
-	var BreadCrumbListView = require("./views"); 
-
-	module.setCrumbs = function (data) {
-		collection.reset(data);
-	};
-
-	module.load = function (region, initialData) {
-		initialData || (initialData = {});
-		collection = new BreadCrumbCollection(initialData);
-
-		collection.on("breadcrumb:selected", function (crumb) {
-			app.trigger(crumb.get("trigger"));
-		});
-
-		var view = new BreadCrumbListView({collection: collection});
-
-		region.show(view);
-	};
-
-	return module;
-}
-
-module.exports = BreadCrumbModule;
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/breadcrumb/index.js","/breadcrumb")
-},{"+7ZJp0":14,"./models":2,"./views":3,"buffer":11}],2:[function(require,module,exports){
-(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
-var Backbone = require("backbone");
-
-var BreadCrumb = Backbone.Model.extend({
-	select: function () {
-		this.trigger("breadcrumb:selected", this);
-	}
-});
-
-var BreadCrumbCollection = Backbone.Collection.extend({
-	model: BreadCrumb
-});
-
-module.exports = BreadCrumbCollection;
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/breadcrumb/models.js","/breadcrumb")
-},{"+7ZJp0":14,"backbone":10,"buffer":11}],3:[function(require,module,exports){
-(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
-var Marionette = require('backbone.marionette');
-
-var BreadCrumbItemView = Marionette.ItemView.extend({
-	tagName: "li",
-	template: "#breadcrumbTemplate",
-	events: {
-		"click a":"fireTrigger"
-	},
-	fireTrigger: function (e) {
-		e.preventDefault();
-		this.model.select();
-	}
-});
-
-var BreadCrumbListView = Marionette.CollectionView.extend({
-	tagName: "ol",
-	className: "breadcrumbs",
-	childView: BreadCrumbItemView
-});
-
-module.exports = BreadCrumbListView;
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/breadcrumb/views.js","/breadcrumb")
-},{"+7ZJp0":14,"backbone.marionette":6,"buffer":11}],4:[function(require,module,exports){
-(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 var $ = require('jquery');
 var _ = require('underscore');
 var Backbone = require('backbone');
 Backbone.$ = $;
 var Marionette = require('backbone.marionette');
-var BreadCrumbModule = require("./breadcrumb/index");
-var GamesRouter = require("./games/router");
+var BreadCrumbModule = require("./modules/breadcrumb/index");
+var GamesModule = require("./modules/games/index");
 
 var games = [
 	{
@@ -102,23 +31,6 @@ GMS.addRegions({
 	breadCrumbRegion: "#breadCrumbContainer"
 });
 
-//Models
-var GameModel = Backbone.Model.extend({
-	url: "/api/games",
-	defaults: {
-		displayName: ""
-	},
-	select: function () {
-		GMS.trigger("game:details:load", this);
-	}
-});
-
-//Collections
-var GamesCollection = Backbone.Collection.extend({
-	url: "/api/games",
-	model: GameModel
-});
-
 //App Router
 var HomeRouter = Backbone.Router.extend({
 	routes: {
@@ -130,26 +42,9 @@ var HomeRouter = Backbone.Router.extend({
 });
 
 //Controllers
-var AppController = Marionette.Object.extend({
+var HomeController = Marionette.Object.extend({
 	showIndex: function () {
 		GMS.mainRegion.show(new IndexView());
-	},
-	showGameList: function () {
-		var gameListView = new GameListView({
-			collection: GMS.Games
-		});
-
-		GMS.mainRegion.show(gameListView);
-		GMS.GamesRouter.navigate("games");
-	},
-	showGameDetails: function (game) {
-		var layout = new GameDetailsLayoutView()
-		GMS.mainRegion.show(layout);
-		
-		layout.summary.show(new GameDetailsSummaryView());
-		layout.stats.show(new GameDetailsStatsView());
-		
-		GMS.GamesRouter.navigate("game/" + game.id);
 	}
 });
 
@@ -170,8 +65,12 @@ GMS.addInitializer(function () {
 	var breadcrumbs = new BreadCrumbModule(GMS);
 	breadcrumbs.load(GMS.breadCrumbRegion, {title: "Home"});
 
+	var games = new GamesModule({
+		app: GMS
+	});
+
 	GMS.on("game:details:load", function (game) {
-		GMS.AppController.showGameDetails(game);
+		games.controller.showGameDetails(game);
 		breadcrumbs.setCrumbs([
 			crumbs.home,
 			crumbs.games,
@@ -182,7 +81,7 @@ GMS.addInitializer(function () {
 	});
 
 	GMS.on("game:list:load", function () {
-		GMS.AppController.showGameList();
+		games.controller.showGameList();
 		breadcrumbs.setCrumbs([
 			crumbs.home,
 			crumbs.games
@@ -190,54 +89,15 @@ GMS.addInitializer(function () {
 	});
 
 	GMS.on("index:load", function () {
-		GMS.AppController.showIndex();
+		GMS.HomeController.showIndex();
 		breadcrumbs.setCrumbs(crumbs.home);
 	});
 });
 
 GMS.addInitializer(function () {
-	GMS.AppController = new AppController();
+	GMS.HomeController = new HomeController();
 	GMS.HomeRouter = new HomeRouter();
-	GMS.GamesRouter = new GamesRouter();
-	GMS.Games = new GamesCollection(games);
-
-	//start
 	Backbone.history.start();
-});
-
-//Views
-var GameItemView = Marionette.ItemView.extend({
-	tagName: "li",
-	template: "#gameTemplate",
-	events: {
-		"click a": "showGameDetails"
-	},
-	showGameDetails: function (e) {
-		e.preventDefault();
-		this.model.select();
-	}
-});
-
-var GameListView = Marionette.CollectionView.extend({
-	tagName: "ul",
-	className: "games",
-	childView: GameItemView
-});
-
-var GameDetailsLayoutView = Marionette.LayoutView.extend({
-	template: "#gameDetailsLayoutTemplate",
-	regions: {
-		"summary" : "#gameDetailsSummaryContainer",
-		"stats" : "#gameDetailsStatsContainer"
-	}
-});
-
-var GameDetailsSummaryView = Marionette.ItemView.extend({
-	template: "#gameDetailsSummaryTemplate"
-});
-
-var GameDetailsStatsView = Marionette.ItemView.extend({
-	template: "#gameDetailsStatsTemplate"
 });
 
 var IndexView = Marionette.ItemView.extend({
@@ -252,28 +112,216 @@ var IndexView = Marionette.ItemView.extend({
 });
 
 GMS.start();
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/fake_5519e8d3.js","/")
-},{"+7ZJp0":14,"./breadcrumb/index":1,"./games/router":5,"backbone":10,"backbone.marionette":6,"buffer":11,"jquery":15,"underscore":16}],5:[function(require,module,exports){
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/fake_76e65d62.js","/")
+},{"./modules/breadcrumb/index":2,"./modules/games/index":6,"1YiZ5S":20,"backbone":16,"backbone.marionette":12,"buffer":17,"jquery":21,"underscore":22}],2:[function(require,module,exports){
+(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
+module.exports = function (app) {
+	var module = {};
+	var collection = {};
+
+	var BreadCrumbCollection = require("./model");
+	var BreadCrumbListView = require("./views"); 
+
+	module.setCrumbs = function (data) {
+		collection.reset(data);
+	};
+
+	module.load = function (region, initialData) {
+		initialData || (initialData = {});
+		collection = new BreadCrumbCollection(initialData);
+
+		collection.on("breadcrumb:selected", function (crumb) {
+			app.trigger(crumb.get("trigger"));
+		});
+
+		var view = new BreadCrumbListView({collection: collection});
+
+		region.show(view);
+	};
+
+	return module;
+}
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/modules/breadcrumb/index.js","/modules/breadcrumb")
+},{"./model":3,"./views":4,"1YiZ5S":20,"buffer":17}],3:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 var Backbone = require("backbone");
 
-var GamesRouter = Backbone.Router.extend({
+var BreadCrumb = Backbone.Model.extend({
+	select: function () {
+		this.trigger("breadcrumb:selected", this);
+	}
+});
+
+var BreadCrumbCollection = Backbone.Collection.extend({
+	model: BreadCrumb
+});
+
+module.exports = BreadCrumbCollection;
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/modules/breadcrumb/model.js","/modules/breadcrumb")
+},{"1YiZ5S":20,"backbone":16,"buffer":17}],4:[function(require,module,exports){
+(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
+var Marionette = require('backbone.marionette');
+
+var BreadCrumbItemView = Marionette.ItemView.extend({
+	tagName: "li",
+	template: "#breadcrumbTemplate",
+	events: {
+		"click a":"fireTrigger"
+	},
+	fireTrigger: function (e) {
+		e.preventDefault();
+		this.model.select();
+	}
+});
+
+var BreadCrumbListView = Marionette.CollectionView.extend({
+	tagName: "ol",
+	className: "breadcrumbs",
+	childView: BreadCrumbItemView
+});
+
+module.exports = BreadCrumbListView;
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/modules/breadcrumb/views.js","/modules/breadcrumb")
+},{"1YiZ5S":20,"backbone.marionette":12,"buffer":17}],5:[function(require,module,exports){
+(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
+var Marionette = require("backbone.marionette");
+
+var GamesDetailLayoutView = require("./views/gameDetailsLayout");
+var GamesView = require("./views/games");
+
+module.exports = Marionette.Object.extend({
+	initialize: function (options) {
+		this.module = options.module;
+	},
+	showGameList: function () {
+		var gamesView = new GamesView({
+			collection: module.collection
+		});
+
+		console.log(this.module.app);
+
+		this.module.app.mainRegion.show(gamesView);
+		this.module.router.navigate("games");
+	},
+	showGameDetails: function (game) {
+		var layout = new GameDetailsLayoutView();
+
+		this.module.router.show(layout);
+		
+		layout.summary.show(new GameDetailsSummaryView());
+		layout.stats.show(new GameDetailsStatsView());
+		
+		this.module.router.navigate("game/" + game.id);
+	}
+});
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/modules/games/controller.js","/modules/games")
+},{"./views/gameDetailsLayout":10,"./views/games":11,"1YiZ5S":20,"backbone.marionette":12,"buffer":17}],6:[function(require,module,exports){
+(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
+var GamesCollection = require("./model");
+var GamesRouter = require("./router");
+var GamesController = require("./controller");
+
+module.exports = function (settings) {
+	var module = {};
+	var initialData = settings.initialData || [];
+
+	module.app = settings.app || {};
+
+	module.collection = new GamesCollection(initialData);
+
+	module.router = new GamesRouter({
+		module: module
+	});
+
+	module.controller = new GamesController({
+		module: module
+	});
+
+	return module;
+}
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/modules/games/index.js","/modules/games")
+},{"./controller":5,"./model":7,"./router":8,"1YiZ5S":20,"buffer":17}],7:[function(require,module,exports){
+(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
+var Backbone = require("backbone");
+
+var GameModel = Backbone.Model.extend({
+	url: "/api/games",
+	defaults: {
+		displayName: ""
+	},
+	select: function (app) {
+		app.trigger("game:details:load", this);
+	}
+});
+
+var GamesCollection = Backbone.Collection.extend({
+	url: "/api/games",
+	model: GameModel
+});
+
+module.exports = GamesCollection;
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/modules/games/model.js","/modules/games")
+},{"1YiZ5S":20,"backbone":16,"buffer":17}],8:[function(require,module,exports){
+(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
+var Backbone = require("backbone");
+
+module.exports = Backbone.Router.extend({
+	initialize: function (options) {
+		this.module = options.module;
+	},
 	routes: {
 		"games" : "showGameList",
 		"game/:id": "showGameDetails"
 	},
 	showGameList: function () {
-		GMS.trigger("game:list:load");
+		this.module.app.trigger("game:list:load");
 	},
 	showGameDetails: function (id) {
-		var game = GMS.Games.get(id);
+		var game = this.module.app.collection.get(id);
 		game.select();
 	}
 });
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/modules/games/router.js","/modules/games")
+},{"1YiZ5S":20,"backbone":16,"buffer":17}],9:[function(require,module,exports){
+(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
+var Marionette = require("backbone.marionette");
 
-module.exports = GamesRouter;
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/games/router.js","/games")
-},{"+7ZJp0":14,"backbone":10,"buffer":11}],6:[function(require,module,exports){
+module.exports = Marionette.ItemView.extend({
+	tagName: "li",
+	template: "#gameTemplate",
+	events: {
+		"click a": "showGameDetails"
+	},
+	showGameDetails: function (e) {
+		e.preventDefault();
+		this.model.select();
+	}
+});
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/modules/games/views/game.js","/modules/games/views")
+},{"1YiZ5S":20,"backbone.marionette":12,"buffer":17}],10:[function(require,module,exports){
+(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
+var Marionette = require("backbone.marionette");
+
+module.exports = Marionette.LayoutView.extend({
+	template: "#gameDetailsLayoutTemplate",
+	regions: {
+		"summary" : "#gameDetailsSummaryContainer",
+		"stats" : "#gameDetailsStatsContainer"
+	}
+});
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/modules/games/views/gameDetailsLayout.js","/modules/games/views")
+},{"1YiZ5S":20,"backbone.marionette":12,"buffer":17}],11:[function(require,module,exports){
+(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
+var Marionette = require("backbone.marionette");
+var Game = require("./game");
+
+module.exports = Marionette.CollectionView.extend({
+	tagName: "ul",
+	className: "games",
+	childView: Game
+});
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/modules/games/views/games.js","/modules/games/views")
+},{"./game":9,"1YiZ5S":20,"backbone.marionette":12,"buffer":17}],12:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 // MarionetteJS (Backbone.Marionette)
 // ----------------------------------
@@ -3637,8 +3685,8 @@ module.exports = GamesRouter;
   return Marionette;
 }));
 
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../../../node_modules/backbone.marionette/lib/core/backbone.marionette.js","/../../../node_modules/backbone.marionette/lib/core")
-},{"+7ZJp0":14,"backbone":10,"backbone.babysitter":7,"backbone.wreqr":8,"buffer":11,"underscore":9}],7:[function(require,module,exports){
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../node_modules/backbone.marionette/lib/core/backbone.marionette.js","/../node_modules/backbone.marionette/lib/core")
+},{"1YiZ5S":20,"backbone":16,"backbone.babysitter":13,"backbone.wreqr":14,"buffer":17,"underscore":15}],13:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 // Backbone.BabySitter
 // -------------------
@@ -3831,8 +3879,8 @@ module.exports = GamesRouter;
 
 }));
 
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../../../node_modules/backbone.marionette/node_modules/backbone.babysitter/lib/backbone.babysitter.js","/../../../node_modules/backbone.marionette/node_modules/backbone.babysitter/lib")
-},{"+7ZJp0":14,"backbone":10,"buffer":11,"underscore":9}],8:[function(require,module,exports){
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../node_modules/backbone.marionette/node_modules/backbone.babysitter/lib/backbone.babysitter.js","/../node_modules/backbone.marionette/node_modules/backbone.babysitter/lib")
+},{"1YiZ5S":20,"backbone":16,"buffer":17,"underscore":15}],14:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 // Backbone.Wreqr (Backbone.Marionette)
 // ----------------------------------
@@ -4275,8 +4323,8 @@ module.exports = GamesRouter;
 
 }));
 
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../../../node_modules/backbone.marionette/node_modules/backbone.wreqr/lib/backbone.wreqr.js","/../../../node_modules/backbone.marionette/node_modules/backbone.wreqr/lib")
-},{"+7ZJp0":14,"backbone":10,"buffer":11,"underscore":9}],9:[function(require,module,exports){
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../node_modules/backbone.marionette/node_modules/backbone.wreqr/lib/backbone.wreqr.js","/../node_modules/backbone.marionette/node_modules/backbone.wreqr/lib")
+},{"1YiZ5S":20,"backbone":16,"buffer":17,"underscore":15}],15:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 //     Underscore.js 1.6.0
 //     http://underscorejs.org
@@ -5622,8 +5670,8 @@ module.exports = GamesRouter;
   }
 }).call(this);
 
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../../../node_modules/backbone.marionette/node_modules/underscore/underscore.js","/../../../node_modules/backbone.marionette/node_modules/underscore")
-},{"+7ZJp0":14,"buffer":11}],10:[function(require,module,exports){
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../node_modules/backbone.marionette/node_modules/underscore/underscore.js","/../node_modules/backbone.marionette/node_modules/underscore")
+},{"1YiZ5S":20,"buffer":17}],16:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 //     Backbone.js 1.1.2
 
@@ -7234,8 +7282,8 @@ module.exports = GamesRouter;
 
 }));
 
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../../../node_modules/backbone/backbone.js","/../../../node_modules/backbone")
-},{"+7ZJp0":14,"buffer":11,"underscore":16}],11:[function(require,module,exports){
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../node_modules/backbone/backbone.js","/../node_modules/backbone")
+},{"1YiZ5S":20,"buffer":17,"underscore":22}],17:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 /*!
  * The buffer module from node.js, for the browser.
@@ -8347,8 +8395,8 @@ function assert (test, message) {
   if (!test) throw new Error(message || 'Failed assertion')
 }
 
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../../../node_modules/gulp-browserify/node_modules/browserify/node_modules/buffer/index.js","/../../../node_modules/gulp-browserify/node_modules/browserify/node_modules/buffer")
-},{"+7ZJp0":14,"base64-js":12,"buffer":11,"ieee754":13}],12:[function(require,module,exports){
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../node_modules/gulp-browserify/node_modules/browserify/node_modules/buffer/index.js","/../node_modules/gulp-browserify/node_modules/browserify/node_modules/buffer")
+},{"1YiZ5S":20,"base64-js":18,"buffer":17,"ieee754":19}],18:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
@@ -8475,8 +8523,8 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../../../node_modules/gulp-browserify/node_modules/browserify/node_modules/buffer/node_modules/base64-js/lib/b64.js","/../../../node_modules/gulp-browserify/node_modules/browserify/node_modules/buffer/node_modules/base64-js/lib")
-},{"+7ZJp0":14,"buffer":11}],13:[function(require,module,exports){
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../node_modules/gulp-browserify/node_modules/browserify/node_modules/buffer/node_modules/base64-js/lib/b64.js","/../node_modules/gulp-browserify/node_modules/browserify/node_modules/buffer/node_modules/base64-js/lib")
+},{"1YiZ5S":20,"buffer":17}],19:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
@@ -8563,8 +8611,8 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../../../node_modules/gulp-browserify/node_modules/browserify/node_modules/buffer/node_modules/ieee754/index.js","/../../../node_modules/gulp-browserify/node_modules/browserify/node_modules/buffer/node_modules/ieee754")
-},{"+7ZJp0":14,"buffer":11}],14:[function(require,module,exports){
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../node_modules/gulp-browserify/node_modules/browserify/node_modules/buffer/node_modules/ieee754/index.js","/../node_modules/gulp-browserify/node_modules/browserify/node_modules/buffer/node_modules/ieee754")
+},{"1YiZ5S":20,"buffer":17}],20:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 // shim for using process in browser
 
@@ -8630,8 +8678,8 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../../../node_modules/gulp-browserify/node_modules/browserify/node_modules/process/browser.js","/../../../node_modules/gulp-browserify/node_modules/browserify/node_modules/process")
-},{"+7ZJp0":14,"buffer":11}],15:[function(require,module,exports){
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../node_modules/gulp-browserify/node_modules/browserify/node_modules/process/browser.js","/../node_modules/gulp-browserify/node_modules/browserify/node_modules/process")
+},{"1YiZ5S":20,"buffer":17}],21:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 /*!
  * jQuery JavaScript Library v2.1.3
@@ -17839,8 +17887,8 @@ return jQuery;
 
 }));
 
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../../../node_modules/jquery/dist/jquery.js","/../../../node_modules/jquery/dist")
-},{"+7ZJp0":14,"buffer":11}],16:[function(require,module,exports){
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../node_modules/jquery/dist/jquery.js","/../node_modules/jquery/dist")
+},{"1YiZ5S":20,"buffer":17}],22:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
@@ -19391,5 +19439,5 @@ return jQuery;
   }
 }.call(this));
 
-}).call(this,require("+7ZJp0"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../../../node_modules/underscore/underscore.js","/../../../node_modules/underscore")
-},{"+7ZJp0":14,"buffer":11}]},{},[4])
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/../node_modules/underscore/underscore.js","/../node_modules/underscore")
+},{"1YiZ5S":20,"buffer":17}]},{},[1])

@@ -1,8 +1,8 @@
-var BreadCrumbModule = function (app) {
+module.exports = function (app) {
 	var module = {};
 	var collection = {};
 
-	var BreadCrumbCollection = require("./models");
+	var BreadCrumbCollection = require("./model");
 	var BreadCrumbListView = require("./views"); 
 
 	module.setCrumbs = function (data) {
@@ -24,5 +24,3 @@ var BreadCrumbModule = function (app) {
 
 	return module;
 }
-
-module.exports = BreadCrumbModule;

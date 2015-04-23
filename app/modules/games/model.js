@@ -10,7 +10,6 @@ var GameModel = Backbone.Model.extend({
 	}
 });
 
-//Collections
 var GamesCollection = Backbone.Collection.extend({
 	url: "/api/games",
 	model: GameModel

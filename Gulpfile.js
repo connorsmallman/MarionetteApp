@@ -3,7 +3,7 @@ var browserify = require('gulp-browserify');
 
 
 gulp.task('browserify', function () {
-  gulp.src('./app/assets/js/app.js')
+  gulp.src('./app/app.js')
     .pipe(browserify({
       insertGlobals : true
     }))
