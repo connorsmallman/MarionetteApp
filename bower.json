@@ -1,0 +1,19 @@
+{
+  "name": "GMS",
+  "version": "0.0.0",
+  "moduleType": [
+    "amd",
+    "globals"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap-less": "~3.3.4"
+  }
+}
