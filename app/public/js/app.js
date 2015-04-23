@@ -8,7 +8,7 @@ var Marionette = require('backbone.marionette');
 var BreadCrumbModule = require("./modules/breadcrumb/index");
 var GamesModule = require("./modules/games/index");
 
-var games = [
+var gamesData = [
 	{
 		id: 1,
 		displayName: "test1"
@@ -66,7 +66,8 @@ GMS.addInitializer(function () {
 	breadcrumbs.load(GMS.breadCrumbRegion, {title: "Home"});
 
 	var games = new GamesModule({
-		app: GMS
+		app: GMS, 
+		initialData: gamesData
 	});
 
 	GMS.on("game:details:load", function (game) {
@@ -112,7 +113,7 @@ var IndexView = Marionette.ItemView.extend({
 });
 
 GMS.start();
-}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/fake_76e65d62.js","/")
+}).call(this,require("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/fake_c68549b5.js","/")
 },{"./modules/breadcrumb/index":2,"./modules/games/index":6,"1YiZ5S":20,"backbone":16,"backbone.marionette":12,"buffer":17,"jquery":21,"underscore":22}],2:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 module.exports = function (app) {
@@ -223,6 +224,9 @@ var GamesController = require("./controller");
 
 module.exports = function (settings) {
 	var module = {};
+
+	console.log(settings);
+
 	var initialData = settings.initialData || [];
 
 	module.app = settings.app || {};

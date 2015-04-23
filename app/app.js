@@ -6,7 +6,7 @@ var Marionette = require('backbone.marionette');
 var BreadCrumbModule = require("./modules/breadcrumb/index");
 var GamesModule = require("./modules/games/index");
 
-var games = [
+var gamesData = [
 	{
 		id: 1,
 		displayName: "test1"
@@ -64,7 +64,8 @@ GMS.addInitializer(function () {
 	breadcrumbs.load(GMS.breadCrumbRegion, {title: "Home"});
 
 	var games = new GamesModule({
-		app: GMS
+		app: GMS, 
+		initialData: gamesData
 	});
 
 	GMS.on("game:details:load", function (game) {

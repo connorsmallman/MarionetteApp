@@ -4,6 +4,9 @@ var GamesController = require("./controller");
 
 module.exports = function (settings) {
 	var module = {};
+
+	console.log(settings);
+
 	var initialData = settings.initialData || [];
 
 	module.app = settings.app || {};
