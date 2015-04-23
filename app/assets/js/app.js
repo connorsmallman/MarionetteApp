@@ -4,6 +4,7 @@ var Backbone = require('backbone');
 Backbone.$ = $;
 var Marionette = require('backbone.marionette');
 var BreadCrumbModule = require("./breadcrumb/index");
+var GamesRouter = require("./games/router");
 
 var games = [
 	{
@@ -46,21 +47,12 @@ var GamesCollection = Backbone.Collection.extend({
 });
 
 //App Router
-var AppRouter = Backbone.Router.extend({
+var HomeRouter = Backbone.Router.extend({
 	routes: {
 		"" : "showIndex",
-		"games" : "showGameList",
-		"game/:id": "showGameDetails"
 	},
 	showIndex: function () {
 		GMS.trigger("index:load");
-	},
-	showGameList: function () {
-		GMS.trigger("game:list:load");
-	},
-	showGameDetails: function (id) {
-		var game = GMS.Games.get(id);
-		game.select();
 	}
 });
 
@@ -75,7 +67,7 @@ var AppController = Marionette.Object.extend({
 		});
 
 		GMS.mainRegion.show(gameListView);
-		GMS.AppRouter.navigate("games");
+		GMS.GamesRouter.navigate("games");
 	},
 	showGameDetails: function (game) {
 		var layout = new GameDetailsLayoutView()
@@ -84,7 +76,7 @@ var AppController = Marionette.Object.extend({
 		layout.summary.show(new GameDetailsSummaryView());
 		layout.stats.show(new GameDetailsStatsView());
 		
-		GMS.AppRouter.navigate("game/" + game.id);
+		GMS.GamesRouter.navigate("game/" + game.id);
 	}
 });
 
@@ -132,7 +124,8 @@ GMS.addInitializer(function () {
 
 GMS.addInitializer(function () {
 	GMS.AppController = new AppController();
-	GMS.AppRouter = new AppRouter();
+	GMS.HomeRouter = new HomeRouter();
+	GMS.GamesRouter = new GamesRouter();
 	GMS.Games = new GamesCollection(games);
 
 	//start
